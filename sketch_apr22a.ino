@@ -19,7 +19,8 @@ int wilgotnosc = 10000;
 int pompa = 11;
 
 int max_wilg_eeprom = 3;
-int max_wilg = EEPROM.read(max_wilg_eeprom);
+float max_wilg_h = EEPROM.read(max_wilg_eeprom);
+int max_wilg = max_wilg_h * 10;
 int min_wilgotnosc_eeprom = 0;
 int min_wilgotnosc = EEPROM.read(min_wilgotnosc_eeprom);
 
@@ -33,7 +34,7 @@ int sekundy_eeprom = 4;
 
 int sekundy = EEPROM.read(sekundy_eeprom);
 int minuty = EEPROM.read(minuty_eeprom);
-int czas = minuty * 6000 + sekundy * 1000;
+long czas = (int(minuty) * 60000) + (int(sekundy) * 1000);
 int l_czas = 0;
 
 //czas czekania
@@ -43,7 +44,7 @@ int sekundy2_eeprom = 6;
 
 int sekundy2 = EEPROM.read(sekundy2_eeprom);
 int minuty2 = EEPROM.read(minuty2_eeprom);
-int czas2 = minuty2 * 6000 + sekundy2 * 1000;
+long czas2 = (int(minuty2) * 60000) + (int(sekundy2) * 1000);
 int l_czas2 = 0;
 
 bool zapis = false;
@@ -52,6 +53,8 @@ bool menu = true;
 int l = 0;
 
 void setup() {
+  czas = minuty * 60000 + sekundy * 1000;
+  czas2 = minuty2 * 60000 + sekundy2 * 1000;
   //EEPROM.write(minuty2_eeprom, 0);
   //EEPROM.write(sekundy2_eeprom, 0);
   Serial.begin(9600);
@@ -62,9 +65,9 @@ void setup() {
   pinMode(pompa, OUTPUT);
   pinMode(A0, INPUT);
   digitalWrite(pompa, HIGH);
-  //wilgotnosc = analogRead(A0);
+  int wilgotnosc = analogRead(A0);
   lcd.begin(16, 2);
-  lcd.backlight(); 
+  lcd.backlight();
   lcd.print("Witaj w GardenOS");
   lcd.setCursor(0, 1);
   lcd.print("");
@@ -72,19 +75,20 @@ void setup() {
 }
 
 void loop() {
-  Serial.println("czas: " + String(timer.time()));
-  Serial.println("czas2: " + String(timer2.time()));
+  //Serial.println("czas: " + String(timer.time()));
+  //Serial.println("czas2: " + String(timer2.time()));
   wilgotnosc = analogRead(A2);
   float wilg_po_przeliczeniu = (float(wilgotnosc)/float(max_wilg))*float(100);
 //  Serial.println(wilg_po_przeliczeniu);
-//  Serial.println("w:" + String(wilgotnosc));
-//  Serial.println("minw:" + String(min_wilgotnosc));
-//  Serial.println("maxw:" + String(max_wilg)); 
+//  Serial.println("czas2:" + String(czas2));
 //  Serial.println("czas:" + String(czas));
+//  Serial.println("min2:" + String(minuty2)); 
+  //Serial.println("minuty:" + String(minuty));
+  //Serial.println("czas_int:" + String(czas2));
   if(menu == true) {
   if(digitalRead(przycisk_01) == LOW) {
     licznik++;
-    if(licznik > 4) {
+    if(licznik > 5) {
       licznik = 0;
     }
     delay(200);
@@ -126,6 +130,14 @@ void loop() {
         {
           stan_menu = 5;
         }
+        break;
+      case 5: 
+        lcd.setCursor(0,1);
+        lcd.print("Wilgotnosc: ");
+        int pokazywana_wilg = int(wilg_po_przeliczeniu);
+        lcd.setCursor(11,1);
+        lcd.print(String(pokazywana_wilg) + "%           ");
+        break;
     }
   }
   //------------------------------ MAX WILG --------------------------------
@@ -147,8 +159,8 @@ void loop() {
     lcd.setCursor(0,1);
     lcd.print(String(max_wilg) + "          ");
     delay(100);
+    max_wilg_h = max_wilg/10; 
     zapis = true;
-    EEPROM.write(max_wilg_eeprom, max_wilg);
     }
     while(digitalRead(przycisk_03) == LOW && digitalRead(przycisk_02) == HIGH && stan_menu == 6 && licznik == 4) {
       menu = false;
@@ -159,8 +171,8 @@ void loop() {
       lcd.setCursor(0,1);
       lcd.print(String(max_wilg) + "          ");
       delay(100);
-      zapis = true;
-      EEPROM.write(max_wilg_eeprom, max_wilg);
+      max_wilg_h = max_wilg/10; 
+      zapis = true; 
       } 
   // ------------------------- WILGOTNOSC --------------------------------- 
   if(digitalRead(przycisk_04) == LOW && stan_menu == 1 && licznik == 1) {
@@ -203,7 +215,6 @@ void loop() {
     }
     delay(100);
     zapis = true;
-    EEPROM.write(min_wilgotnosc_eeprom, min_wilgotnosc);
     }
   while(digitalRead(przycisk_03) == LOW && digitalRead(przycisk_02) == HIGH && stan_menu == 2) {
     menu = false;
@@ -233,7 +244,6 @@ void loop() {
     }
     delay(100);
     zapis = true;
-    EEPROM.write(min_wilgotnosc_eeprom, min_wilgotnosc);
     }
   if(digitalRead(przycisk_04) == LOW && zapis == true && (stan_menu == 2 || stan_menu == 4 || stan_menu == 6 || stan_menu == 11)) {
     lcd.clear();
@@ -242,6 +252,13 @@ void loop() {
     lcd.setCursor(0, 1);
     lcd.print("Stan: zapisano");
     EEPROM.write(min_wilgotnosc_eeprom, min_wilgotnosc);
+    EEPROM.write(sekundy_eeprom, sekundy);
+    EEPROM.write(minuty_eeprom, minuty);
+    EEPROM.write(sekundy2_eeprom, sekundy2);
+    EEPROM.write(minuty2_eeprom, minuty2);
+    EEPROM.write(max_wilg_eeprom, max_wilg_h);
+    timer.begin(czas);
+    timer2.begin(czas2);
     delay(500);
     lcd.setCursor(0, 1);
     lcd.print("                    ");
@@ -282,7 +299,7 @@ void loop() {
   }
   while(digitalRead(przycisk_02) == LOW && stan_menu == 4 && licznik == 2) {
     menu = false;
-    if(l_czas == 0 && minuty >= 0 && minuty < 60 )
+    if(l_czas == 0 && minuty < 60 )
     {
       minuty += 1;
       delay(100);
@@ -318,11 +335,12 @@ void loop() {
 
     }
     delay(100);
+    
+//    EEPROM.write(sekundy_eeprom, sekundy);
+//    EEPROM.write(minuty_eeprom, minuty);
+    czas = (minuty * 60000) + (sekundy * 1000);
     zapis = true;
-    czas = minuty * 6000 + sekundy * 1000;
-    timer.begin(czas);
-    EEPROM.write(sekundy_eeprom, sekundy);
-    EEPROM.write(minuty_eeprom, minuty);
+    
     }
     while(digitalRead(przycisk_03) == LOW && digitalRead(przycisk_02) == HIGH && stan_menu == 4 && licznik == 2) {
     menu = false;
@@ -366,11 +384,8 @@ void loop() {
 
     }
     delay(100);
+    czas = (minuty * 60000) + (sekundy * 1000);
     zapis = true;
-    czas = minuty * 6000 + sekundy * 1000;
-    timer.begin(czas);
-    EEPROM.write(sekundy_eeprom, sekundy);
-    EEPROM.write(minuty_eeprom, minuty);
     }
   //-------------------------------------- CZAS CZEKANIA --------------------------------------------
   if(digitalRead(przycisk_04) == LOW && stan_menu == 10 && licznik == 3) {
@@ -380,11 +395,11 @@ void loop() {
     lcd.print("Podaj wartosc:  ");
     lcd.setCursor(0,1);
     lcd.print(String(minuty2) + ":" + String(sekundy2) + "                     ");
-    if(minuty < 10) {
+    if(minuty2 < 10) {
         lcd.setCursor(0,1);
         lcd.print("0" + String(minuty2) + ":" + String(sekundy2) + "                 ");
     }
-    if(sekundy < 10) {
+    if(sekundy2 < 10) {
         lcd.setCursor(0,1);
         lcd.print(String(minuty2) + ":0" + String(sekundy2)+ "                         ");
     }
@@ -441,11 +456,8 @@ void loop() {
 
     }
     delay(100);
+    czas2 = (minuty2 * 60000) + (sekundy2 * 1000);
     zapis = true;
-    czas2 = minuty2 * 6000 + sekundy2 * 1000;
-    timer2.begin(czas);
-    EEPROM.write(sekundy2_eeprom, sekundy2);
-    EEPROM.write(minuty2_eeprom, minuty2);
     }
     while(digitalRead(przycisk_03) == LOW && digitalRead(przycisk_02) == HIGH && stan_menu == 11 && licznik == 3) {
     menu = false;
@@ -489,11 +501,8 @@ void loop() {
 
     }
     delay(100);
+    czas2 = (minuty2 * 60000) + (sekundy2 * 1000);
     zapis = true;
-    czas2 = minuty2 * 6000 + sekundy2 * 1000;
-    timer2.begin(czas);
-    EEPROM.write(sekundy2_eeprom, sekundy2);
-    EEPROM.write(minuty2_eeprom, minuty2);
     }
   //Podlewanie 
   if(int(wilg_po_przeliczeniu) < min_wilgotnosc && stan_menu == 0 && menu == true) {
